@@ -1,0 +1,33 @@
+This is a mirror of http://www.vim.org/scripts/script.php?script_id=1552
+
+ScreenShot.vim enables you generate HTML code for screenshot of all open windows at once.
+Windows layout will be preserved, and status line for every window will be displayed.
+In other words, the resulted HTML will look the same as you VIM looks, with exception of menu, toolbar and other GUI items. 
+Here(http://community.livejournal.com/screenshot_vim/4086.html) you can see a few examples.
+
+ScreenShot.vim defines three commands:
+1) ScreenShot  -- to make screenshot itself
+2) Text2Html -- to generate HTML code for syntax highlighting of  peace of selected text  or of all current buffer if nothing selected. This command resemles standard command TOhtml, though has a few differences:
+   a) Generation of HTML code is designed in assumption that this code will occupy just a region of HTML page rather than all page, so it wrapped in <table> tag and has no <body> tag. Background color and default text color for this region of page will be setted properly.
+   b) Width of resulted HTML will be always equal to the width of current window. When 'wrap' setting is on, lines longer than the width of the window will wrap and  displaying continues on the next line.  When off lines will not wrap and only part of long lines will be displayed. So, you do not need to take in account long lines which may broke you page.
+   c) Foldcolumn will be displayed
+3) Diff2Html -- to display two files comparing with differencies highlighted. You may select any part of the first file, and obtain HTML code for this part and corresponding part of the second file separated with vertical split line.
+
+ScreenShot.vim has a few global options which are stored in global dictionary g:ScreenShot:
+
+g:ScreenShot.Title -- is title bar enabled
+g:ScreenShot.Icon -- is VIM icon displayed in title bar (disabling of icon can significantly decrease size of document)
+g:ScreenShot.Credits -- are credits displayed
+g:ScreenShot.force_background -- force background color to some specific values 
+g:ScreenShot.fill_screen -- force space from end of line to end of window to be filled with whitespaces(especially useful with command Text2Html to force highlighted text to occupy a region of HTML page with fixed width)
+
+Color should be specified as a string in HTML color format #RRGGBB. This option may be useful as there is no reliable method to find out background color for console versions of VIM.
+
+For instance, if you want to disable icon and credits you should insert in your vimrc : 
+
+let ScreenShot = {'Icon':0, 'Credits':0, 'force_background':'#FFFFFF'}
+
+By default all these options enabled.
+
+
+
