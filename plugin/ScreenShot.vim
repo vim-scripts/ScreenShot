@@ -72,9 +72,13 @@
 "        3. 'force_background' option added to g:ScreenShot dictionary to enable
 "        user to adjust HTML-generation to terminal behaviour distinct from typical.
 "        (color should be specified as a string in HTML format #RRGGBB)
-"
-"    	 
-"
+"    1.05: 
+"    Added:
+"    	 Good multibyte support(thanks Cyril Slobin <slobin@ice.ru> for suggestion)
+"    1.06:
+"    Fixed:
+"    	 1. Folds are displayed correctly now(was broken in 1.05)
+"    	 2. Unprintable unicode chracters are displayed correctly now
 ""
 " TODO:
 "   1.Very small windows proper rendering
@@ -839,7 +843,7 @@ function! s:GetColoredText(lines,start,finish,height,topfill,lineEnd)
 		let xx = 0
                 let str = getline(y)
                 let chunk = '' 
-		let xmax = strlen(str) + &list
+		let xmax = len(str) + &list		
 		let prefix = s:GetLinePrefix(y,numWidth,realWidth,0)
                 let realX = 0 
                 let [oldId, oldId1] = &diff?[[0,0],[0, 0]] :[0, 0]
@@ -847,8 +851,8 @@ function! s:GetColoredText(lines,start,finish,height,topfill,lineEnd)
 		if x > xmax
                         call add(a:lines, s:SynIdWrap(diff_hlID(y,x),prefix.repeat(' ', width)).a:lineEnd)
                 elseif folded != -1
-			let text = strpart(foldtextresult(y), 0, width)
-			call add(a:lines,prefix.s:SynIdWrap('Folded',s:HtmlEscape(text).repeat(fillChars.fold,width - strlen(text))).a:lineEnd)
+			let text = matchstr(foldtextresult(y), '.'.'\{,'.width.'\}', 0)
+			call add(a:lines,prefix.s:SynIdWrap('Folded',s:HtmlEscape(text).repeat(fillChars.fold,width - strlen(substitute(text, ".", "x", "g"))).a:lineEnd))
                         let y = foldclosedend(y) 
                 else
 			let tab = ''
@@ -861,6 +865,7 @@ function! s:GetColoredText(lines,start,finish,height,topfill,lineEnd)
                                 let newLine = ((xx<maxRealX)?(prefix):s:GetLinePrefix(y,numWidth,realWidth,1)).tab
                                 while realX < maxRealX
                                         let [whole, char, str; dummy]  = matchlist(str, '^\(.\=\)\(.*\)$')
+					let diffX = len(char)?len(char):1
                                         if char == ''
                                                 if eol || !&list || !has_key(listChars,'eol')
                                                         let diff = maxRealX - realX 
@@ -879,30 +884,35 @@ function! s:GetColoredText(lines,start,finish,height,topfill,lineEnd)
                                                         let char = strpart(listChars.tab,0,1).repeat(strpart(listChars.tab,1),diff-1)
                                                 else 
                                                         let id = s:synIDSpec(y,x,hlID('SpecialKey'))
-                                                        if uhex
-                                                                let diff = 4
-                                                                let char = char == "\n"?'<00>':printf('<%02x>',char2nr(char))
-                                                        else
-                                                                let diff = 2
-                                                                let charnr =  char2nr(char)
-                                                                if charnr == 10
-                                                                        let char = '^@'
-                                                                elseif charnr  < 32
-                                                                        let char = '^'.nr2char(64 + charnr)
-                                                                elseif charnr == 127
-                                                                        let char = '^?'
-                                                                elseif charnr < 160
-                                                                        let char = '~'.nr2char(64 + charnr - 128)
-                                                                elseif charnr == 255
-                                                                        let char = '~?'
-                                                                else
-                                                                        let char = '|'.nr2char(32 + charnr - 160)
-                                                                endif
-                                                        endif
+							if char2nr(char) < 0x100
+								if uhex
+									let diff = 4
+									let char = char == "\n"?'<00>':printf('<%02x>',char2nr(char))
+								else
+									let diff = 2
+									let charnr =  char2nr(char)
+									if charnr == 10
+										let char = '^@'
+									elseif charnr  < 32
+										let char = '^'.nr2char(64 + charnr)
+									elseif charnr == 127
+										let char = '^?'
+									elseif charnr < 160
+										let char = '~'.nr2char(64 + charnr - 128)
+									elseif charnr == 255
+										let char = '~?'
+									else
+										let char = '|'.nr2char(32 + charnr - 160)
+									endif
+								endif
+							else
+									let diff = 6
+									let char = printf('<%04x>',char2nr(char))
+							endif
                                                 endif
                                         else
                                                 let diff = 1
-                                                let id = s:synIDfn(y,x,0) " id?id : synIDtrans(synID(y, x, 0))
+                                                let id = s:synIDfn(y,x,0) 
                                         endif
                                         if id != oldId
                                                 if chunk != ''
@@ -912,12 +922,12 @@ function! s:GetColoredText(lines,start,finish,height,topfill,lineEnd)
                                         endif
                                         if realX >= skip 
                                                 let chunk .= char
-                                        elseif realX + strlen(char) >= skip 
-                                                let chunk .= strpart(char,skip - realX) 
+                                        elseif realX + strlen(substitute(char, ".", "x", "g")) >= skip 
+                                                let chunk .= matchstr(char,'.*',skip - realX) 
                                         endif
                                         let realX += diff 
                                         let xx += diff
-                                        let x += 1
+                                        let x += diffX 
                                 endwhile
                                 if chunk != ''
                                         let newLine .= s:SynIdEnd(oldId1).s:SynIdStart(oldId).s:HtmlEscape(chunk)    
